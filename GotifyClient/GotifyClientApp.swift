@@ -40,6 +40,12 @@ struct GotifyClientApp: App {
                 .onAppear {
                     setupMacOS()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { notification in
+                    if let window = notification.object as? NSWindow,
+                       window.identifier?.rawValue == "main" {
+                        appDelegate.windowWillClose()
+                    }
+                }
         }
         .modelContainer(sharedModelContainer)
         .defaultSize(width: 900, height: 600)
