@@ -90,31 +90,47 @@ struct SidebarView: View {
     private var unreadMessages: [GotifyMessage]
 
     var body: some View {
-        List(selection: $selectedTab) {
-            ForEach(NavigationTab.allCases, id: \.self) { tab in
-                NavigationLink(value: tab) {
-                    Label {
-                        HStack {
-                            Text(tab.rawValue)
-                            Spacer()
-                            if tab == .messages && !unreadMessages.isEmpty {
-                                Text("\(unreadMessages.count)")
-                                    .font(.caption)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.red)
-                                    .foregroundColor(.white)
-                                    .clipShape(Capsule())
+        VStack(spacing: 0) {
+            // 顶部标签页区域（消息和服务器）
+            List(selection: $selectedTab) {
+                ForEach([NavigationTab.messages, NavigationTab.servers], id: \.self) { tab in
+                    NavigationLink(value: tab) {
+                        Label {
+                            HStack {
+                                Text(tab.rawValue)
+                                Spacer()
+                                if tab == .messages && !unreadMessages.isEmpty {
+                                    Text("\(unreadMessages.count)")
+                                        .font(.caption)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.red)
+                                        .foregroundColor(.white)
+                                        .clipShape(Capsule())
+                                }
                             }
+                        } icon: {
+                            Image(systemName: tab.icon)
                         }
-                    } icon: {
-                        Image(systemName: tab.icon)
                     }
                 }
             }
+            .listStyle(.sidebar)
+            .navigationTitle("Gotify")
+
+            // 底部设置标签页区域
+            List(selection: $selectedTab) {
+                NavigationLink(value: NavigationTab.settings) {
+                    Label {
+                        Text(NavigationTab.settings.rawValue)
+                    } icon: {
+                        Image(systemName: NavigationTab.settings.icon)
+                    }
+                }
+            }
+            .listStyle(.sidebar)
+            .frame(height: 44)
         }
-        .listStyle(.sidebar)
-        .navigationTitle("Gotify")
         .navigationSplitViewColumnWidth(min: 180, ideal: 200)
     }
 }
