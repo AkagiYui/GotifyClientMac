@@ -102,6 +102,7 @@ struct ServerRowView: View {
             
             Toggle("", isOn: $server.isEnabled)
                 .labelsHidden()
+                .toggleStyle(.switch)
                 .onChange(of: server.isEnabled) { _, newValue in
                     if newValue {
                         WebSocketManager.shared.connect(to: server)

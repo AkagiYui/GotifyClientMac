@@ -200,6 +200,7 @@ struct AppNotificationRowView: View {
             // 通知开关
             Toggle("", isOn: $application.notificationEnabled)
                 .labelsHidden()
+                .toggleStyle(.switch)
                 .onChange(of: application.notificationEnabled) { _, _ in
                     application.updatedAt = Date()
                 }
