@@ -48,77 +48,28 @@ jobs:
           path: artifacts/macos/
           if-no-files-found: error
 
-  build-ios:
-    name: Build iOS App
-    runs-on: macos-15
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
-
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: List available simulators
-        run: xcrun simctl list devices available
-
-      - name: Build iOS App (Simulator)
-        run: |
-          xcodebuild -project GotifyClient.xcodeproj \
-            -scheme GotifyClient \
-            -configuration Release \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            clean build
-
-      - name: Prepare iOS Artifact
-        run: |
-          mkdir -p artifacts/ios
-          cp -R "build/Build/Products/Release-iphonesimulator/GotifyClient.app" artifacts/ios/
-
-      - name: Upload iOS Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: GotifyClient-iOS-Simulator
-          path: artifacts/ios/
-          if-no-files-found: error
-
   release:
     name: Create Release
-    needs: [build-macos, build-ios]
+    needs: [build-macos]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
-    
+
     steps:
       - name: Download macOS Artifact
         uses: actions/download-artifact@v4
         with:
           name: GotifyClient-macOS
           path: macos-app
-      
-      - name: Download iOS Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: GotifyClient-iOS-Simulator
-          path: ios-app
-      
+
       - name: Create ZIP files
         run: |
           cd macos-app && zip -r ../GotifyClient-macOS.zip GotifyClient.app && cd ..
-          cd ios-app && zip -r ../GotifyClient-iOS-Simulator.zip GotifyClient.app && cd ..
-      
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             GotifyClient-macOS.zip
-            GotifyClient-iOS-Simulator.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
