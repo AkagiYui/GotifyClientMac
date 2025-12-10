@@ -22,6 +22,8 @@ struct ServerEditView: View {
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
     @State private var isTesting: Bool = false
+    @State private var showSuccess: Bool = false
+    @State private var successMessage: String = ""
     
     private var isEditing: Bool { server != nil }
     
@@ -88,6 +90,11 @@ struct ServerEditView: View {
             } message: {
                 Text(errorMessage)
             }
+            .alert("成功", isPresented: $showSuccess) {
+                Button("确定", role: .cancel) {}
+            } message: {
+                Text(successMessage)
+            }
             .onAppear {
                 if let server = server {
                     name = server.name
@@ -146,7 +153,7 @@ struct ServerEditView: View {
     
     private func testConnection() {
         isTesting = true
-        
+
         // 简单的连接测试：尝试获取服务器版本
         guard let baseURL = URL(string: url) else {
             errorMessage = "服务器地址格式不正确"
@@ -154,17 +161,17 @@ struct ServerEditView: View {
             isTesting = false
             return
         }
-        
+
         let versionURL = baseURL.appendingPathComponent("version")
-        
+
         Task {
             do {
                 let (_, response) = try await URLSession.shared.data(from: versionURL)
                 if let httpResponse = response as? HTTPURLResponse,
                    httpResponse.statusCode == 200 {
                     await MainActor.run {
-                        errorMessage = "连接成功！"
-                        showError = true
+                        successMessage = "连接成功！"
+                        showSuccess = true
                         isTesting = false
                     }
                 } else {
