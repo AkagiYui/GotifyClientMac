@@ -48,7 +48,7 @@ struct SettingsView: View {
                 }
             ))
             
-            Toggle("启动时隐藏主窗口", isOn: Binding(
+            Toggle("开机启动时隐藏主窗口", isOn: Binding(
                 get: { settings.launchHidden },
                 set: { newValue in
                     settings.launchHidden = newValue

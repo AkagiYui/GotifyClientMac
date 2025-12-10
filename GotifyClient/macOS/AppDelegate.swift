@@ -118,16 +118,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// 检查是否应该隐藏启动
     func checkLaunchHidden() {
-        guard let context = modelContext else { return }
+        guard let context = modelContext else {
+            print("⚠️ ModelContext is nil, cannot check launch hidden setting")
+            return
+        }
 
         let settings = AppSettings.getOrCreate(context: context)
-        if settings.launchHidden {
+        print("📱 Launch settings - launchAtLogin: \(settings.launchAtLogin), launchHidden: \(settings.launchHidden)")
+
+        // 只有在开机自动启动且设置了隐藏时才隐藏窗口
+        if settings.launchAtLogin && settings.launchHidden {
+            print("🔒 Hiding main window on launch")
             // 延迟隐藏窗口，确保应用已完全启动
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 Task { @MainActor in
                     self?.hideMainWindow()
                 }
             }
+        } else {
+            print("👁️ Showing main window on launch")
+            // 确保Dock图标显示
+            showDockIcon()
         }
     }
 }
