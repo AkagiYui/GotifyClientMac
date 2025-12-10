@@ -1,0 +1,122 @@
+name: Build
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    name: Build macOS App
+    runs-on: macos-15
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+      
+      - name: Show Xcode version
+        run: xcodebuild -version
+      
+      - name: Build macOS App
+        run: |
+          xcodebuild -project GotifyClient.xcodeproj \
+            -scheme GotifyClient \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+      
+      - name: Prepare macOS Artifact
+        run: |
+          mkdir -p artifacts/macos
+          cp -R "build/Build/Products/Release/GotifyClient.app" artifacts/macos/
+      
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GotifyClient-macOS
+          path: artifacts/macos/
+          if-no-files-found: error
+
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-15
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+      
+      - name: Show Xcode version
+        run: xcodebuild -version
+      
+      - name: Build iOS App (Simulator)
+        run: |
+          xcodebuild -project GotifyClient.xcodeproj \
+            -scheme GotifyClient \
+            -configuration Release \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.1' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+      
+      - name: Prepare iOS Artifact
+        run: |
+          mkdir -p artifacts/ios
+          cp -R "build/Build/Products/Release-iphonesimulator/GotifyClient.app" artifacts/ios/
+      
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GotifyClient-iOS-Simulator
+          path: artifacts/ios/
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: [build-macos, build-ios]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: GotifyClient-macOS
+          path: macos-app
+      
+      - name: Download iOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: GotifyClient-iOS-Simulator
+          path: ios-app
+      
+      - name: Create ZIP files
+        run: |
+          cd macos-app && zip -r ../GotifyClient-macOS.zip GotifyClient.app && cd ..
+          cd ios-app && zip -r ../GotifyClient-iOS-Simulator.zip GotifyClient.app && cd ..
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            GotifyClient-macOS.zip
+            GotifyClient-iOS-Simulator.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

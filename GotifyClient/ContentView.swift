@@ -2,65 +2,130 @@
 //  ContentView.swift
 //  GotifyClient
 //
-//  Created by kenko on 2025/11/13.
+//  主内容视图
 //
 
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+/// 导航标签页
+enum NavigationTab: String, CaseIterable {
+    case messages = "消息"
+    case servers = "服务器"
+    case settings = "设置"
 
-    var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
+    var icon: String {
+        switch self {
+        case .messages: return "bell.fill"
+        case .servers: return "server.rack"
+        case .settings: return "gearshape.fill"
         }
     }
 }
 
+struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var selectedTab: NavigationTab = .messages
+    @State private var appState = AppState.shared
+
+    var body: some View {
+        #if os(macOS)
+        NavigationSplitView {
+            SidebarView(selectedTab: $selectedTab)
+        } detail: {
+            detailView
+        }
+        .frame(minWidth: 700, minHeight: 500)
+        .onAppear {
+            appState.initialize(modelContext: modelContext)
+        }
+        #else
+        TabView(selection: $selectedTab) {
+            ForEach(NavigationTab.allCases, id: \.self) { tab in
+                NavigationStack {
+                    tabContent(for: tab)
+                }
+                .tabItem {
+                    Label(tab.rawValue, systemImage: tab.icon)
+                }
+                .tag(tab)
+            }
+        }
+        .onAppear {
+            appState.initialize(modelContext: modelContext)
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private var detailView: some View {
+        switch selectedTab {
+        case .messages:
+            MessageListView()
+        case .servers:
+            ServerListView()
+        case .settings:
+            SettingsView()
+        }
+    }
+
+    @ViewBuilder
+    private func tabContent(for tab: NavigationTab) -> some View {
+        switch tab {
+        case .messages:
+            MessageListView()
+        case .servers:
+            ServerListView()
+        case .settings:
+            SettingsView()
+        }
+    }
+}
+
+#if os(macOS)
+/// 侧边栏视图（macOS）
+struct SidebarView: View {
+    @Binding var selectedTab: NavigationTab
+    @Query(filter: #Predicate<GotifyMessage> { !$0.isRead })
+    private var unreadMessages: [GotifyMessage]
+
+    var body: some View {
+        List(selection: $selectedTab) {
+            ForEach(NavigationTab.allCases, id: \.self) { tab in
+                NavigationLink(value: tab) {
+                    Label {
+                        HStack {
+                            Text(tab.rawValue)
+                            Spacer()
+                            if tab == .messages && !unreadMessages.isEmpty {
+                                Text("\(unreadMessages.count)")
+                                    .font(.caption)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.red)
+                                    .foregroundColor(.white)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    } icon: {
+                        Image(systemName: tab.icon)
+                    }
+                }
+            }
+        }
+        .listStyle(.sidebar)
+        .navigationTitle("Gotify")
+        .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+    }
+}
+#endif
+
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(for: [
+            GotifyServer.self,
+            GotifyMessage.self,
+            GotifyApplication.self,
+            AppSettings.self
+        ], inMemory: true)
 }

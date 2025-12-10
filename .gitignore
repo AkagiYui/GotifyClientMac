@@ -5,3 +5,5 @@
 
 *.dmg
 *.app
+
+build/
