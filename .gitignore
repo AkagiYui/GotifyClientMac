@@ -7,3 +7,13 @@
 *.app
 
 build/
+
+# Xcode user-specific files
+*.xcuserstate
+xcuserdata/
+*.xcuserdatad/
+
+# Other Xcode files to ignore
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
