@@ -25,11 +25,9 @@ struct SettingsView: View {
             #if os(macOS)
             launchSettingsSection
             #endif
-            
+
             notificationSettingsSection
-            
-            appNotificationSection
-            
+
             aboutSection
         }
         .formStyle(.grouped)
@@ -81,7 +79,7 @@ struct SettingsView: View {
                     settings.updatedAt = Date()
                 }
             ))
-            
+
             Toggle("通知声音", isOn: Binding(
                 get: { settings.notificationSound },
                 set: { newValue in
@@ -92,17 +90,7 @@ struct SettingsView: View {
             .disabled(!settings.showNotifications)
         }
     }
-    
-    private var appNotificationSection: some View {
-        Section("应用通知") {
-            NavigationLink {
-                AppNotificationSettingsView()
-            } label: {
-                Label("管理应用通知", systemImage: "app.badge")
-            }
-        }
-    }
-    
+
     private var aboutSection: some View {
         Section("关于") {
             HStack {

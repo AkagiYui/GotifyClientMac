@@ -12,12 +12,14 @@ import SwiftData
 enum NavigationTab: String, CaseIterable {
     case messages = "消息"
     case servers = "服务器"
+    case appNotifications = "应用通知"
     case settings = "设置"
 
     var icon: String {
         switch self {
         case .messages: return "bell.fill"
         case .servers: return "server.rack"
+        case .appNotifications: return "app.badge"
         case .settings: return "gearshape.fill"
         }
     }
@@ -64,6 +66,8 @@ struct ContentView: View {
             MessageListView()
         case .servers:
             ServerListView()
+        case .appNotifications:
+            AppNotificationSettingsView()
         case .settings:
             SettingsView()
         }
@@ -76,6 +80,8 @@ struct ContentView: View {
             MessageListView()
         case .servers:
             ServerListView()
+        case .appNotifications:
+            AppNotificationSettingsView()
         case .settings:
             SettingsView()
         }
@@ -91,9 +97,9 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 顶部标签页区域（消息和服务器）
+            // 顶部标签页区域（消息、服务器和应用通知）
             List(selection: $selectedTab) {
-                ForEach([NavigationTab.messages, NavigationTab.servers], id: \.self) { tab in
+                ForEach([NavigationTab.messages, NavigationTab.servers, NavigationTab.appNotifications], id: \.self) { tab in
                     NavigationLink(value: tab) {
                         Label {
                             HStack {
