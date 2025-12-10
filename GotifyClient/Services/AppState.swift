@@ -56,11 +56,15 @@ final class AppState {
                 await self?.handleNewMessage(messageDTO, from: server)
             }
         }
-        
-        WebSocketManager.shared.onConnectionStatusChanged = { server, status in
+
+        WebSocketManager.shared.onConnectionStatusChanged = { [weak self] server, status in
             // 连接状态已经在WebSocketManager中更新到server对象
             if status == .connected {
                 server.lastConnectedAt = Date()
+                // 连接成功后同步应用列表
+                Task { @MainActor in
+                    await self?.syncApplications(for: server)
+                }
             }
         }
     }
@@ -159,20 +163,89 @@ final class AppState {
     /// 标记所有消息为已读
     func markAllAsRead() {
         guard let context = modelContext else { return }
-        
+
         let descriptor = FetchDescriptor<GotifyMessage>(
             predicate: #Predicate { !$0.isRead }
         )
-        
+
         if let messages = try? context.fetch(descriptor) {
             for message in messages {
                 message.isRead = true
             }
         }
-        
+
         unreadCount = 0
         Task {
             await NotificationManager.shared.updateBadgeCount(0)
+        }
+    }
+
+    /// 同步服务器的应用列表
+    /// - Parameter server: 要同步的服务器
+    func syncApplications(for server: GotifyServer) async {
+        guard let context = modelContext else { return }
+
+        do {
+            // 从服务器获取应用列表
+            let applicationDTOs = try await GotifyAPIClient.shared.fetchApplications(from: server)
+
+            // 获取当前服务器的所有应用
+            let serverId = server.id
+            let descriptor = FetchDescriptor<GotifyApplication>(
+                predicate: #Predicate { app in
+                    app.server?.id == serverId
+                }
+            )
+            let existingApps = (try? context.fetch(descriptor)) ?? []
+
+            // 创建一个字典用于快速查找现有应用
+            var existingAppsDict: [Int: GotifyApplication] = [:]
+            for app in existingApps {
+                existingAppsDict[app.appId] = app
+            }
+
+            // 更新或创建应用
+            for appDTO in applicationDTOs {
+                if let existingApp = existingAppsDict[appDTO.id] {
+                    // 更新现有应用
+                    existingApp.name = appDTO.name
+                    existingApp.appDescription = appDTO.description
+                    existingApp.imageUrl = appDTO.image
+                    existingApp.updatedAt = Date()
+                    existingAppsDict.removeValue(forKey: appDTO.id)
+                } else {
+                    // 创建新应用
+                    let newApp = appDTO.toApplication(server: server)
+                    context.insert(newApp)
+                }
+            }
+
+            // 删除服务器上不存在的应用
+            for (_, app) in existingAppsDict {
+                context.delete(app)
+            }
+
+            // 保存上下文
+            try? context.save()
+
+            print("Successfully synced \(applicationDTOs.count) applications for server: \(server.name)")
+        } catch {
+            print("Failed to sync applications for server \(server.name): \(error)")
+        }
+    }
+
+    /// 同步所有已连接服务器的应用列表
+    func syncAllApplications() async {
+        guard let context = modelContext else { return }
+
+        let descriptor = FetchDescriptor<GotifyServer>(
+            predicate: #Predicate { $0.isEnabled }
+        )
+
+        if let servers = try? context.fetch(descriptor) {
+            for server in servers where server.connectionStatus == .connected {
+                await syncApplications(for: server)
+            }
         }
     }
 }

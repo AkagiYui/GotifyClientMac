@@ -58,7 +58,7 @@ struct AppNotificationSettingsView: View {
         ContentUnavailableView {
             Label("暂无应用", systemImage: "app.badge")
         } description: {
-            Text("当从服务器接收到消息时，相关的应用信息将自动添加到这里")
+            Text("连接到服务器后，应用列表将自动同步到这里")
         }
     }
     
@@ -144,32 +144,60 @@ struct AppNotificationSettingsView: View {
 /// 应用通知行视图
 struct AppNotificationRowView: View {
     @Bindable var application: GotifyApplication
-    
+    @Query(sort: \GotifyServer.name) private var servers: [GotifyServer]
+
+    /// 是否显示服务器标签（当有多个服务器时）
+    private var shouldShowServerBadge: Bool {
+        servers.count > 1
+    }
+
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            // 应用图标
+            ApplicationIconView(application: application, size: 44)
+
+            // 应用信息
             VStack(alignment: .leading, spacing: 4) {
-                Text(application.name)
-                    .font(.headline)
-                
+                HStack(spacing: 6) {
+                    Text(application.name)
+                        .font(.headline)
+
+                    // 应用 ID 标签
+                    Text("#\(application.appId)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Color.secondary.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                }
+
                 if !application.appDescription.isEmpty {
                     Text(application.appDescription)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
-                
-                if let serverName = application.server?.name {
-                    Text(serverName)
-                        .font(.caption2)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.secondary.opacity(0.2))
-                        .clipShape(Capsule())
+
+                // 服务器归属标签（仅在有多个服务器时显示）
+                if shouldShowServerBadge, let serverName = application.server?.name {
+                    HStack(spacing: 4) {
+                        Image(systemName: "server.rack")
+                            .font(.caption2)
+                        Text(serverName)
+                            .font(.caption2)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.accentColor.opacity(0.8))
+                    .clipShape(Capsule())
                 }
             }
-            
+
             Spacer()
-            
+
+            // 通知开关
             Toggle("", isOn: $application.notificationEnabled)
                 .labelsHidden()
                 .onChange(of: application.notificationEnabled) { _, _ in
