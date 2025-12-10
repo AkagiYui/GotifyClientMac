@@ -1,0 +1,7 @@
+.augment/
+.vscode/
+
+.DS_Store
+
+*.dmg
+*.app
