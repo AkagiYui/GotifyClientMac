@@ -32,6 +32,10 @@ final class NotificationManager: NSObject, @unchecked Sendable {
     
     private override init() {
         super.init()
+        // 立即设置 delegate，确保能够处理通知显示
+        // 这对于 iOS 尤其重要，因为用户可能已经在系统设置中授予了权限
+        notificationCenter.delegate = self
+        print("📱 NotificationManager initialized, delegate set")
     }
     
     /// 请求通知权限
@@ -39,14 +43,10 @@ final class NotificationManager: NSObject, @unchecked Sendable {
         do {
             let options: UNAuthorizationOptions = [.alert, .sound, .badge]
             isAuthorized = try await notificationCenter.requestAuthorization(options: options)
-            
-            if isAuthorized {
-                notificationCenter.delegate = self
-            }
-            
+            print("📱 Notification authorization result: \(isAuthorized)")
             return isAuthorized
         } catch {
-            print("Failed to request notification authorization: \(error)")
+            print("❌ Failed to request notification authorization: \(error)")
             return false
         }
     }
@@ -66,10 +66,21 @@ final class NotificationManager: NSObject, @unchecked Sendable {
         userInfo: [String: Any] = [:],
         iconImageData: Data? = nil
     ) async {
-        if !isAuthorized {
+        // 检查当前权限状态
+        let status = await checkAuthorizationStatus()
+
+        if status == .notDetermined {
+            // 如果权限未确定，请求权限
             let authorized = await requestAuthorization()
             guard authorized else { return }
+        } else if status != .authorized {
+            // 如果权限被拒绝或其他状态，不发送通知
+            print("Notification permission not granted. Status: \(status.rawValue)")
+            return
         }
+
+        // 更新授权状态
+        isAuthorized = (status == .authorized)
 
         let content = UNMutableNotificationContent()
         content.title = title
@@ -95,8 +106,9 @@ final class NotificationManager: NSObject, @unchecked Sendable {
 
         do {
             try await notificationCenter.add(request)
+            print("📬 Notification sent: \(title)")
         } catch {
-            print("Failed to send notification: \(error)")
+            print("❌ Failed to send notification: \(error)")
         }
     }
     
@@ -254,6 +266,7 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
+        print("📱 willPresent notification: \(notification.request.content.title)")
         return [.banner, .sound, .badge]
     }
     
