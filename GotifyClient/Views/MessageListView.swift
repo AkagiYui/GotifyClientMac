@@ -33,36 +33,36 @@ struct MessageListView: View {
                 messageList
             }
         }
-        .navigationTitle("消息")
-        .searchable(text: $searchText, prompt: "搜索消息")
+        .navigationTitle(L("message.title"))
+        .searchable(text: $searchText, prompt: Text(L("message.search")))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button {
                         markAllAsRead()
                     } label: {
-                        Label("全部标记为已读", systemImage: "checkmark.circle")
+                        Label(L("message.markAllRead"), systemImage: "checkmark.circle")
                     }
-                    
+
                     Divider()
-                    
+
                     Button(role: .destructive) {
                         deleteAllMessages()
                     } label: {
-                        Label("删除所有消息", systemImage: "trash")
+                        Label(L("message.deleteAll"), systemImage: "trash")
                     }
                 } label: {
-                    Label("更多", systemImage: "ellipsis.circle")
+                    Label(L("message.more"), systemImage: "ellipsis.circle")
                 }
             }
         }
     }
-    
+
     private var emptyStateView: some View {
         ContentUnavailableView {
-            Label("暂无消息", systemImage: "bell.slash")
+            Label(L("message.empty"), systemImage: "bell.slash")
         } description: {
-            Text("当服务器推送新消息时，它们将显示在这里")
+            Text(L("message.emptyDescription"))
         }
     }
     
@@ -138,7 +138,7 @@ struct MessageRowView: View {
                             .frame(width: 8, height: 8)
                     }
 
-                    Text(message.title.isEmpty ? "无标题" : message.title)
+                    Text(message.title.isEmpty ? L("message.noTitle") : message.title)
                         .font(.headline)
                         .lineLimit(1)
 

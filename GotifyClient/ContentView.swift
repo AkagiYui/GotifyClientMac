@@ -10,10 +10,10 @@ import SwiftData
 
 /// 导航标签页
 enum NavigationTab: String, CaseIterable {
-    case messages = "消息"
-    case servers = "服务器"
-    case appNotifications = "应用通知"
-    case settings = "设置"
+    case messages
+    case servers
+    case appNotifications
+    case settings
 
     var icon: String {
         switch self {
@@ -23,11 +23,26 @@ enum NavigationTab: String, CaseIterable {
         case .settings: return "gearshape.fill"
         }
     }
+
+    /// 本地化显示名称
+    @MainActor
+    var localizedName: String {
+        switch self {
+        case .messages:
+            return L("tab.messages")
+        case .servers:
+            return L("tab.servers")
+        case .appNotifications:
+            return L("tab.appNotifications")
+        case .settings:
+            return L("tab.settings")
+        }
+    }
 }
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var selectedTab: NavigationTab = .messages
+    @Binding var selectedTab: NavigationTab
     @State private var appState = AppState.shared
 
     var body: some View {
@@ -48,7 +63,7 @@ struct ContentView: View {
                     tabContent(for: tab)
                 }
                 .tabItem {
-                    Label(tab.rawValue, systemImage: tab.icon)
+                    Label(tab.localizedName, systemImage: tab.icon)
                 }
                 .tag(tab)
             }
@@ -103,7 +118,7 @@ struct SidebarView: View {
                     NavigationLink(value: tab) {
                         Label {
                             HStack {
-                                Text(tab.rawValue)
+                                Text(tab.localizedName)
                                 Spacer()
                                 if tab == .messages && !unreadMessages.isEmpty {
                                     Text("\(unreadMessages.count)")
@@ -128,7 +143,7 @@ struct SidebarView: View {
             List(selection: $selectedTab) {
                 NavigationLink(value: NavigationTab.settings) {
                     Label {
-                        Text(NavigationTab.settings.rawValue)
+                        Text(NavigationTab.settings.localizedName)
                     } icon: {
                         Image(systemName: NavigationTab.settings.icon)
                     }
@@ -143,7 +158,8 @@ struct SidebarView: View {
 #endif
 
 #Preview {
-    ContentView()
+    @Previewable @State var selectedTab: NavigationTab = .messages
+    ContentView(selectedTab: $selectedTab)
         .modelContainer(for: [
             GotifyServer.self,
             GotifyMessage.self,

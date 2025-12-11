@@ -30,27 +30,27 @@ struct ServerEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("基本信息") {
-                    TextField("服务器名称", text: $name)
+                Section(L("serverEdit.basicInfo")) {
+                    TextField(L("serverEdit.name"), text: $name)
                         .textContentType(.name)
-                    
-                    TextField("服务器地址", text: $url)
+
+                    TextField(L("serverEdit.url"), text: $url)
                         .textContentType(.URL)
                         .autocorrectionDisabled()
                         #if os(iOS)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         #endif
-                    
-                    SecureField("客户端令牌", text: $clientToken)
+
+                    SecureField(L("serverEdit.clientToken"), text: $clientToken)
                 }
-                
+
                 Section {
-                    Toggle("启用连接", isOn: $isEnabled)
+                    Toggle(L("serverEdit.enableConnection"), isOn: $isEnabled)
                 } footer: {
-                    Text("启用后将自动连接到此服务器并接收消息")
+                    Text(L("serverEdit.enableDescription"))
                 }
-                
+
                 Section {
                     Button {
                         testConnection()
@@ -60,38 +60,38 @@ struct ServerEditView: View {
                                 ProgressView()
                                     .scaleEffect(0.8)
                             }
-                            Text(isTesting ? "测试中..." : "测试连接")
+                            Text(isTesting ? L("serverEdit.testing") : L("serverEdit.testConnection"))
                         }
                     }
                     .disabled(url.isEmpty || clientToken.isEmpty || isTesting)
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(isEditing ? "编辑服务器" : "添加服务器")
+            .navigationTitle(isEditing ? L("serverEdit.title.edit") : L("serverEdit.title.add"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
+                    Button(L("common.cancel")) {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
+                    Button(L("common.save")) {
                         saveServer()
                     }
                     .disabled(name.isEmpty || url.isEmpty || clientToken.isEmpty)
                 }
             }
-            .alert("错误", isPresented: $showError) {
-                Button("确定", role: .cancel) {}
+            .alert(L("common.error"), isPresented: $showError) {
+                Button(L("common.ok"), role: .cancel) {}
             } message: {
                 Text(errorMessage)
             }
-            .alert("成功", isPresented: $showSuccess) {
-                Button("确定", role: .cancel) {}
+            .alert(L("common.success"), isPresented: $showSuccess) {
+                Button(L("common.ok"), role: .cancel) {}
             } message: {
                 Text(successMessage)
             }
@@ -109,7 +109,7 @@ struct ServerEditView: View {
     private func saveServer() {
         // 验证URL格式
         guard let _ = URL(string: url) else {
-            errorMessage = "服务器地址格式不正确"
+            errorMessage = L("error.invalidUrl")
             showError = true
             return
         }
@@ -156,7 +156,7 @@ struct ServerEditView: View {
 
         // 简单的连接测试：尝试获取服务器版本
         guard let baseURL = URL(string: url) else {
-            errorMessage = "服务器地址格式不正确"
+            errorMessage = L("error.invalidUrl")
             showError = true
             isTesting = false
             return
@@ -170,7 +170,7 @@ struct ServerEditView: View {
                 if let httpResponse = response as? HTTPURLResponse,
                    httpResponse.statusCode == 200 {
                     await MainActor.run {
-                        successMessage = "连接成功！"
+                        successMessage = L("success.connectionSuccess")
                         showSuccess = true
                         isTesting = false
                     }
@@ -179,7 +179,7 @@ struct ServerEditView: View {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "连接失败：\(error.localizedDescription)"
+                    errorMessage = L("error.connectionFailed", error.localizedDescription)
                     showError = true
                     isTesting = false
                 }

@@ -14,7 +14,7 @@ struct ServerListView: View {
     @Query(sort: \GotifyServer.createdAt, order: .reverse) private var servers: [GotifyServer]
     @State private var showAddSheet = false
     @State private var serverToEdit: GotifyServer?
-    
+
     var body: some View {
         Group {
             if servers.isEmpty {
@@ -23,13 +23,13 @@ struct ServerListView: View {
                 serverList
             }
         }
-        .navigationTitle("服务器")
+        .navigationTitle(L("server.title"))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showAddSheet = true
                 } label: {
-                    Label("添加服务器", systemImage: "plus")
+                    Label(L("server.add"), systemImage: "plus")
                 }
             }
         }
@@ -40,20 +40,20 @@ struct ServerListView: View {
             ServerEditView(server: server)
         }
     }
-    
+
     private var emptyStateView: some View {
         ContentUnavailableView {
-            Label("暂无服务器", systemImage: "server.rack")
+            Label(L("server.empty"), systemImage: "server.rack")
         } description: {
-            Text("点击右上角的添加按钮来添加你的第一个Gotify服务器")
+            Text(L("server.emptyDescription"))
         } actions: {
-            Button("添加服务器") {
+            Button(L("server.add")) {
                 showAddSheet = true
             }
             .buttonStyle(.borderedProminent)
         }
     }
-    
+
     private var serverList: some View {
         List {
             ForEach(servers) { server in
@@ -64,7 +64,7 @@ struct ServerListView: View {
             .onDelete(perform: deleteServers)
         }
     }
-    
+
     private func deleteServers(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
@@ -114,17 +114,17 @@ struct ServerRowView: View {
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .contextMenu {
-            Button("编辑") {
+            Button(L("server.edit")) {
                 onEdit()
             }
-            
-            Button("重新连接") {
+
+            Button(L("server.reconnect")) {
                 WebSocketManager.shared.reconnect(to: server)
             }
-            
+
             Divider()
-            
-            Button("删除", role: .destructive) {
+
+            Button(L("server.delete"), role: .destructive) {
                 // 删除操作由onDelete处理
             }
         }

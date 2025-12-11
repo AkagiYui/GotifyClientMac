@@ -45,77 +45,77 @@ struct AppNotificationSettingsView: View {
                 applicationList
             }
         }
-        .navigationTitle("应用通知设置")
-        .searchable(text: $searchText, prompt: "搜索应用")
+        .navigationTitle(L("appNotification.title"))
+        .searchable(text: $searchText, prompt: Text(L("appNotification.search")))
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 serverFilterMenu
             }
         }
     }
-    
+
     private var emptyStateView: some View {
         ContentUnavailableView {
-            Label("暂无应用", systemImage: "app.badge")
+            Label(L("appNotification.empty"), systemImage: "app.badge")
         } description: {
-            Text("连接到服务器后，应用列表将自动同步到这里")
+            Text(L("appNotification.emptyDescription"))
         }
     }
-    
+
     private var applicationList: some View {
         List {
             Section {
                 batchOperationsView
             } header: {
-                Text("批量操作")
+                Text(L("appNotification.batchOperations"))
             }
-            
+
             Section {
                 ForEach(filteredApplications) { app in
                     AppNotificationRowView(application: app)
                 }
             } header: {
-                Text("应用列表 (\(filteredApplications.count))")
+                Text(L("appNotification.appList", filteredApplications.count))
             }
         }
     }
-    
+
     private var batchOperationsView: some View {
         HStack {
             Button {
                 setAllNotifications(enabled: true)
             } label: {
-                Label("全部启用", systemImage: "bell.fill")
+                Label(L("appNotification.enableAll"), systemImage: "bell.fill")
             }
             .buttonStyle(.bordered)
-            
+
             Spacer()
-            
+
             Button {
                 setAllNotifications(enabled: false)
             } label: {
-                Label("全部禁用", systemImage: "bell.slash.fill")
+                Label(L("appNotification.disableAll"), systemImage: "bell.slash.fill")
             }
             .buttonStyle(.bordered)
         }
         .padding(.vertical, 4)
     }
-    
+
     private var serverFilterMenu: some View {
         Menu {
             Button {
                 selectedServerId = nil
             } label: {
                 HStack {
-                    Text("所有服务器")
+                    Text(L("appNotification.allServers"))
                     if selectedServerId == nil {
                         Image(systemName: "checkmark")
                     }
                 }
             }
-            
+
             Divider()
-            
+
             ForEach(servers) { server in
                 Button {
                     selectedServerId = server.id
@@ -129,7 +129,7 @@ struct AppNotificationSettingsView: View {
                 }
             }
         } label: {
-            Label("筛选", systemImage: "line.3.horizontal.decrease.circle")
+            Label(L("appNotification.filter"), systemImage: "line.3.horizontal.decrease.circle")
         }
     }
     

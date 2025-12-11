@@ -15,11 +15,11 @@ import ServiceManagement
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var settingsQuery: [AppSettings]
-    
+
     private var settings: AppSettings {
         settingsQuery.first ?? AppSettings.getOrCreate(context: modelContext)
     }
-    
+
     var body: some View {
         Form {
             #if os(macOS)
@@ -28,16 +28,22 @@ struct SettingsView: View {
 
             notificationSettingsSection
 
+            languageSettingsSection
+
             aboutSection
+
+            #if DEBUG
+            debugSection
+            #endif
         }
         .formStyle(.grouped)
-        .navigationTitle("设置")
+        .navigationTitle(L("settings.title"))
     }
-    
+
     #if os(macOS)
     private var launchSettingsSection: some View {
-        Section("启动设置") {
-            Toggle("开机自动启动", isOn: Binding(
+        Section(L("settings.launch")) {
+            Toggle(L("settings.launchAtLogin"), isOn: Binding(
                 get: { settings.launchAtLogin },
                 set: { newValue in
                     settings.launchAtLogin = newValue
@@ -45,8 +51,8 @@ struct SettingsView: View {
                     updateLoginItem(enabled: newValue)
                 }
             ))
-            
-            Toggle("开机启动时隐藏主窗口", isOn: Binding(
+
+            Toggle(L("settings.launchHidden"), isOn: Binding(
                 get: { settings.launchHidden },
                 set: { newValue in
                     settings.launchHidden = newValue
@@ -56,7 +62,7 @@ struct SettingsView: View {
             .disabled(!settings.launchAtLogin)
         }
     }
-    
+
     private func updateLoginItem(enabled: Bool) {
         do {
             if enabled {
@@ -69,10 +75,10 @@ struct SettingsView: View {
         }
     }
     #endif
-    
+
     private var notificationSettingsSection: some View {
-        Section("通知设置") {
-            Toggle("显示系统通知", isOn: Binding(
+        Section(L("settings.notifications")) {
+            Toggle(L("settings.showNotifications"), isOn: Binding(
                 get: { settings.showNotifications },
                 set: { newValue in
                     settings.showNotifications = newValue
@@ -80,7 +86,7 @@ struct SettingsView: View {
                 }
             ))
 
-            Toggle("通知声音", isOn: Binding(
+            Toggle(L("settings.notificationSound"), isOn: Binding(
                 get: { settings.notificationSound },
                 set: { newValue in
                     settings.notificationSound = newValue
@@ -91,25 +97,43 @@ struct SettingsView: View {
         }
     }
 
+    private var languageSettingsSection: some View {
+        Section(L("settings.language")) {
+            Picker(L("settings.selectLanguage"), selection: Binding(
+                get: { settings.language },
+                set: { newValue in
+                    settings.language = newValue
+                    settings.updatedAt = Date()
+                    LocalizationManager.shared.setLanguage(newValue)
+                }
+            )) {
+                ForEach(AppLanguage.allCases, id: \.self) { language in
+                    Text(language.displayName)
+                        .tag(language)
+                }
+            }
+        }
+    }
+
     private var aboutSection: some View {
-        Section("关于") {
+        Section(L("settings.about")) {
             HStack {
-                Text("版本")
+                Text(L("settings.version"))
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                     .foregroundColor(.secondary)
             }
-            
+
             HStack {
-                Text("构建版本")
+                Text(L("settings.buildVersion"))
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
                     .foregroundColor(.secondary)
             }
-            
+
             Link(destination: URL(string: "https://github.com/AkagiYui/GotifyClientMac")!) {
                 HStack {
-                    Text("GitHub 仓库")
+                    Text(L("settings.githubRepo"))
                     Spacer()
                     Image(systemName: "arrow.up.right.square")
                         .foregroundColor(.secondary)
@@ -117,7 +141,70 @@ struct SettingsView: View {
             }
         }
     }
+
+    #if DEBUG
+    private var debugSection: some View {
+        Section("Debug Info") {
+            // 语言设置
+            DebugInfoRow(label: "Language Code", value: LocalizationManager.shared.effectiveLanguageCode)
+            DebugInfoRow(label: "Language Setting", value: LocalizationManager.shared.currentLanguage.rawValue)
+            DebugInfoRow(label: "System Languages", value: Locale.preferredLanguages.prefix(3).joined(separator: ", "))
+
+            // 应用信息
+            DebugInfoRow(label: "Bundle ID", value: Bundle.main.bundleIdentifier ?? "N/A")
+            DebugInfoRow(label: "Build Config", value: "DEBUG")
+
+            // 系统信息
+            DebugInfoRow(label: "macOS Version", value: ProcessInfo.processInfo.operatingSystemVersionString)
+            DebugInfoRow(label: "Process ID", value: "\(ProcessInfo.processInfo.processIdentifier)")
+
+            // 数据存储
+            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Bundle.main.bundleIdentifier ?? "") {
+                DebugInfoRow(label: "Container", value: containerURL.path)
+            }
+
+            // 内存使用
+            DebugInfoRow(label: "Memory Usage", value: formatMemoryUsage())
+        }
+    }
+
+    private func formatMemoryUsage() -> String {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        if result == KERN_SUCCESS {
+            let usedMB = Double(info.resident_size) / 1024.0 / 1024.0
+            return String(format: "%.1f MB", usedMB)
+        }
+        return "N/A"
+    }
+    #endif
 }
+
+#if DEBUG
+/// 调试信息行组件
+private struct DebugInfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(.caption.monospaced())
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+        }
+    }
+}
+#endif
 
 #Preview {
     NavigationStack {

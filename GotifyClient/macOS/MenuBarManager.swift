@@ -83,33 +83,33 @@ final class MenuBarManager: NSObject {
     /// 显示上下文菜单
     private func showContextMenu() {
         let menu = NSMenu()
-        
+
         let openItem = NSMenuItem(
-            title: "打开主窗口",
+            title: L("menu.openMainWindow"),
             action: #selector(openMainWindowAction),
             keyEquivalent: ""
         )
         openItem.target = self
         menu.addItem(openItem)
-        
+
         let markAllReadItem = NSMenuItem(
-            title: "全部标记为已读",
+            title: L("menu.markAllRead"),
             action: #selector(markAllAsReadAction),
             keyEquivalent: ""
         )
         markAllReadItem.target = self
         menu.addItem(markAllReadItem)
-        
+
         menu.addItem(NSMenuItem.separator())
-        
+
         let quitItem = NSMenuItem(
-            title: "退出",
+            title: L("menu.quit"),
             action: #selector(quitAppAction),
             keyEquivalent: "q"
         )
         quitItem.target = self
         menu.addItem(quitItem)
-        
+
         statusItem?.menu = menu
         statusItem?.button?.performClick(nil)
         statusItem?.menu = nil // 清除菜单，以便下次左键点击生效
