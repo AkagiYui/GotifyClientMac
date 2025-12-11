@@ -54,12 +54,13 @@ final class MenuBarManager: NSObject {
     /// 更新状态栏图标
     private func updateStatusItemImage() {
         guard let button = statusItem?.button else { return }
-        
-        let imageName = unreadCount > 0 ? "bell.badge.fill" : "bell.fill"
-        let image = NSImage(systemSymbolName: imageName, accessibilityDescription: "Gotify")
-        image?.isTemplate = true
-        button.image = image
-        
+
+        // 使用自定义 Gotify 菜单栏图标
+        if let image = NSImage(named: "MenuBarIcon") {
+            image.isTemplate = true  // 设置为模板图像，自动适配浅色/深色模式
+            button.image = image
+        }
+
         // 显示未读数量
         if unreadCount > 0 {
             button.title = " \(unreadCount > 99 ? "99+" : "\(unreadCount)")"
