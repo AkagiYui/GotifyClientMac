@@ -88,7 +88,8 @@ final class AppState {
             await NotificationManager.shared.sendNotificationForMessage(
                 message,
                 serverName: server.name,
-                soundEnabled: settings.notificationSound
+                soundEnabled: settings.notificationSound,
+                modelContext: context
             )
         }
         
