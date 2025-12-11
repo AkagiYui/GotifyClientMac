@@ -107,7 +107,17 @@ final class NotificationManager: NSObject, @unchecked Sendable {
         soundEnabled: Bool,
         modelContext: ModelContext
     ) async {
-        let title = message.title.isEmpty ? serverName : message.title
+        // 获取应用名称
+        let appName = await getApplicationName(for: message, modelContext: modelContext)
+
+        // 构建通知标题：如果消息有标题则使用"[应用名] 标题"，否则使用"[应用名] 服务器名"
+        let title: String
+        if !message.title.isEmpty {
+            title = appName.map { "[\($0)] \(message.title)" } ?? message.title
+        } else {
+            title = appName.map { "[\($0)] \(serverName)" } ?? serverName
+        }
+
         let body = message.message
 
         // 获取应用图标数据
@@ -142,6 +152,27 @@ final class NotificationManager: NSObject, @unchecked Sendable {
     }
 
     // MARK: - Private Methods
+
+    /// 获取应用名称
+    private func getApplicationName(for message: GotifyMessage, modelContext: ModelContext) async -> String? {
+        guard let server = message.server else { return nil }
+
+        // 查询对应的应用
+        let appId = message.appId
+        let serverId = server.id
+        let descriptor = FetchDescriptor<GotifyApplication>(
+            predicate: #Predicate { app in
+                app.appId == appId && app.server?.id == serverId
+            }
+        )
+
+        guard let applications = try? modelContext.fetch(descriptor),
+              let application = applications.first else {
+            return nil
+        }
+
+        return application.name
+    }
 
     /// 获取应用图标数据
     private func getApplicationIconData(for message: GotifyMessage, modelContext: ModelContext) async -> Data? {
@@ -189,11 +220,23 @@ final class NotificationManager: NSObject, @unchecked Sendable {
             // 写入图片数据到临时文件
             try imageData.write(to: fileURL)
 
+            // 创建附件选项
+            // 在macOS上,附件会显示在通知内容中(不是左侧的应用图标位置)
+            var options: [String: Any] = [
+                UNNotificationAttachmentOptionsTypeHintKey: "public.png"
+            ]
+
+            #if os(macOS)
+            // 在macOS上,设置缩略图裁剪矩形以更好地显示图标
+            // 使用整个图片作为缩略图
+            options[UNNotificationAttachmentOptionsThumbnailClippingRectKey] = CGRect(x: 0, y: 0, width: 1, height: 1)
+            #endif
+
             // 创建附件
             let attachment = try UNNotificationAttachment(
                 identifier: "app-icon",
                 url: fileURL,
-                options: [UNNotificationAttachmentOptionsTypeHintKey: "public.png"]
+                options: options
             )
 
             return attachment
