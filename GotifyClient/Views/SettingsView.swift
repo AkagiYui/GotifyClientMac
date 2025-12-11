@@ -28,6 +28,8 @@ struct SettingsView: View {
 
             notificationSettingsSection
 
+            appearanceSettingsSection
+
             languageSettingsSection
 
             aboutSection
@@ -94,6 +96,24 @@ struct SettingsView: View {
                 }
             ))
             .disabled(!settings.showNotifications)
+        }
+    }
+
+    private var appearanceSettingsSection: some View {
+        Section(L("settings.appearance")) {
+            Picker(L("settings.selectAppearance"), selection: Binding(
+                get: { settings.appearance },
+                set: { newValue in
+                    settings.appearance = newValue
+                    settings.updatedAt = Date()
+                    AppearanceManager.shared.setAppearance(newValue)
+                }
+            )) {
+                ForEach(AppAppearance.allCases, id: \.self) { appearance in
+                    Text(appearance.displayName)
+                        .tag(appearance)
+                }
+            }
         }
     }
 

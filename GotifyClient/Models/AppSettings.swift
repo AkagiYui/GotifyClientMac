@@ -6,7 +6,57 @@
 //
 
 import Foundation
+import SwiftUI
 import SwiftData
+#if os(macOS)
+import AppKit
+#endif
+
+/// 应用外观模式选项
+enum AppAppearance: String, CaseIterable, Codable {
+    case system = "system"      // 跟随系统
+    case light = "light"        // 浅色模式
+    case dark = "dark"          // 深色模式
+
+    /// 显示名称
+    @MainActor
+    var displayName: String {
+        switch self {
+        case .system:
+            return LocalizationManager.shared.localizedString("appearance.system")
+        case .light:
+            return LocalizationManager.shared.localizedString("appearance.light")
+        case .dark:
+            return LocalizationManager.shared.localizedString("appearance.dark")
+        }
+    }
+
+    /// 获取对应的 SwiftUI ColorScheme（用于 preferredColorScheme modifier）
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system:
+            return nil  // nil 表示跟随系统
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        }
+    }
+
+    #if os(macOS)
+    /// 获取对应的 NSAppearance
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .system:
+            return nil  // nil 表示跟随系统
+        case .light:
+            return NSAppearance(named: .aqua)
+        case .dark:
+            return NSAppearance(named: .darkAqua)
+        }
+    }
+    #endif
+}
 
 /// 应用语言选项
 enum AppLanguage: String, CaseIterable, Codable {
@@ -57,6 +107,8 @@ final class AppSettings {
     var notificationSound: Bool
     /// 应用语言（存储原始值）
     var languageRawValue: String = "system"
+    /// 应用外观（存储原始值）
+    var appearanceRawValue: String = "system"
     /// 创建时间
     var createdAt: Date
     /// 更新时间
@@ -68,6 +120,12 @@ final class AppSettings {
         set { languageRawValue = newValue.rawValue }
     }
 
+    /// 应用外观（计算属性）
+    var appearance: AppAppearance {
+        get { AppAppearance(rawValue: appearanceRawValue) ?? .system }
+        set { appearanceRawValue = newValue.rawValue }
+    }
+
     init() {
         self.id = UUID()
         self.launchAtLogin = false
@@ -75,6 +133,7 @@ final class AppSettings {
         self.showNotifications = true
         self.notificationSound = true
         self.languageRawValue = AppLanguage.system.rawValue
+        self.appearanceRawValue = AppAppearance.system.rawValue
         self.createdAt = Date()
         self.updatedAt = Date()
     }
