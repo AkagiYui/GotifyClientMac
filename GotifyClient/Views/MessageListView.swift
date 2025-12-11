@@ -104,47 +104,72 @@ struct MessageListView: View {
 /// 消息行视图
 struct MessageRowView: View {
     @Bindable var message: GotifyMessage
-    
+    @Query private var applications: [GotifyApplication]
+
+    /// 获取消息对应的应用
+    private var application: GotifyApplication? {
+        applications.first { app in
+            app.appId == message.appId && app.server?.id == message.server?.id
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                if !message.isRead {
-                    Circle()
-                        .fill(.blue)
-                        .frame(width: 8, height: 8)
-                }
-                
-                Text(message.title.isEmpty ? "无标题" : message.title)
-                    .font(.headline)
-                    .lineLimit(1)
-                
-                Spacer()
-                
-                Image(systemName: message.priorityIconName)
-                    .foregroundColor(priorityColor)
-                    .font(.caption)
-            }
-            
-            Text(message.message)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .lineLimit(2)
-            
-            HStack {
-                if let serverName = message.server?.name {
-                    Text(serverName)
-                        .font(.caption2)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.secondary.opacity(0.2))
-                        .clipShape(Capsule())
-                }
-                
-                Spacer()
-                
-                Text(message.date, style: .relative)
-                    .font(.caption)
+        HStack(spacing: 12) {
+            // 应用图标
+            if let app = application {
+                ApplicationIconView(application: app, size: 40)
+            } else {
+                // 默认图标
+                Image(systemName: "app.fill")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
                     .foregroundColor(.secondary)
+                    .frame(width: 40, height: 40)
+                    .padding(8)
+                    .background(Color.secondary.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    if !message.isRead {
+                        Circle()
+                            .fill(.blue)
+                            .frame(width: 8, height: 8)
+                    }
+
+                    Text(message.title.isEmpty ? "无标题" : message.title)
+                        .font(.headline)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    Image(systemName: message.priorityIconName)
+                        .foregroundColor(priorityColor)
+                        .font(.caption)
+                }
+
+                Text(message.message)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+
+                HStack {
+                    if let serverName = message.server?.name {
+                        Text(serverName)
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.secondary.opacity(0.2))
+                            .clipShape(Capsule())
+                    }
+
+                    Spacer()
+
+                    Text(message.date, style: .relative)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding(.vertical, 4)
@@ -155,7 +180,7 @@ struct MessageRowView: View {
             }
         }
     }
-    
+
     private var priorityColor: Color {
         switch message.priority {
         case 0: return .gray
