@@ -63,14 +63,28 @@ final class AppearanceManager {
     /// 应用外观设置
     func applyAppearance() {
         #if os(macOS)
-        NSApp.appearance = currentAppearance.nsAppearance
+        let targetAppearance = currentAppearance.nsAppearance
+        NSApp.appearance = targetAppearance
+
+        // 显式更新所有窗口的外观，确保 SwiftUI 内容立即响应
+        // 这对于从深色模式切换到跟随系统时特别重要
+        for window in NSApp.windows {
+            window.appearance = targetAppearance
+        }
         #endif
         // iOS 通过 SwiftUI 的 preferredColorScheme 在视图层面处理
     }
 
     /// 获取当前的 ColorScheme（用于 SwiftUI preferredColorScheme modifier）
     var colorScheme: ColorScheme? {
-        currentAppearance.colorScheme
+        #if os(macOS)
+        // 在 macOS 上，返回 nil 让 SwiftUI 完全跟随 NSApp.appearance
+        // 这样可以避免 preferredColorScheme 和 NSApp.appearance 之间的冲突
+        // 确保标题栏和内容区域的外观始终保持一致
+        return nil
+        #else
+        return currentAppearance.colorScheme
+        #endif
     }
 
     /// 从 AppSettings 同步外观设置
