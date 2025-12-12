@@ -9,7 +9,7 @@ import sys
 import argparse
 import subprocess
 from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 # 需要生成的图标尺寸 (基于 Contents.json)
 ICON_SIZES = [
@@ -79,7 +79,10 @@ def convert_svg_to_png(svg_path, output_path, size):
         return False
 
 
-def generate_icon(svg_path, output_path, size, bg_color, padding_ratio=0.15, scale_ratio=1.0, add_rounded_corners=True, corner_padding_ratio=0.0):
+def generate_icon(svg_path, output_path, size, bg_color, padding_ratio=0.15, scale_ratio=1.0,
+                  add_rounded_corners=True, corner_padding_ratio=0.0,
+                  add_shadow=False, shadow_offset_x=0.0, shadow_offset_y=0.02,
+                  shadow_blur=0.05, shadow_opacity=0.9):
     """
     生成单个图标
 
@@ -92,6 +95,11 @@ def generate_icon(svg_path, output_path, size, bg_color, padding_ratio=0.15, sca
         scale_ratio: 图标内容缩放比例 (1.0 = 100%, 0.8 = 80%)
         add_rounded_corners: 是否添加圆角 (macOS 需要)
         corner_padding_ratio: 圆角图标的外边距比例 (0.05 = 5% - 基于整个图标尺寸)
+        add_shadow: 是否添加阴影
+        shadow_offset_x: 阴影水平偏移比例 (0.0 = 居中)
+        shadow_offset_y: 阴影垂直偏移比例 (0.02 = 向下2%)
+        shadow_blur: 阴影模糊半径比例 (0.05 = 5%)
+        shadow_opacity: 阴影透明度 (0.3 = 30%)
     """
     # 如果需要圆角且设置了外边距，先计算圆角图标的实际尺寸
     if add_rounded_corners and corner_padding_ratio > 0:
@@ -133,9 +141,45 @@ def generate_icon(svg_path, output_path, size, bg_color, padding_ratio=0.15, sca
         rounded_output.paste(icon, (0, 0))
         rounded_output.putalpha(mask)
 
-        # 如果设置了外边距，创建最终的透明背景图片
-        if corner_padding_ratio > 0:
+        # 如果设置了外边距或需要阴影，创建最终的透明背景图片
+        if corner_padding_ratio > 0 or add_shadow:
             final_output = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+
+            # 添加阴影 - 基于完整尺寸，这样阴影可以利用整个透明区域
+            if add_shadow:
+                # 创建阴影层 - 使用完整尺寸
+                shadow = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+
+                # 在阴影层上绘制圆角矩形（位置和大小与圆角图标一致）
+                shadow_draw = ImageDraw.Draw(shadow)
+
+                # 使用与图标相同的圆角半径
+                radius = int(rounded_icon_size * 0.2237)
+
+                # 计算阴影的圆角矩形位置（考虑阴影偏移）
+                shadow_offset_x_px = int(size * shadow_offset_x)
+                shadow_offset_y_px = int(size * shadow_offset_y)
+
+                shadow_left = rounded_icon_offset + shadow_offset_x_px
+                shadow_top = rounded_icon_offset + shadow_offset_y_px
+                shadow_right = shadow_left + rounded_icon_size
+                shadow_bottom = shadow_top + rounded_icon_size
+
+                shadow_draw.rounded_rectangle(
+                    [(shadow_left, shadow_top), (shadow_right, shadow_bottom)],
+                    radius=radius,
+                    fill=(0, 0, 0, int(255 * shadow_opacity))
+                )
+
+                # 应用高斯模糊 - 基于完整尺寸
+                blur_radius = int(size * shadow_blur)
+                if blur_radius > 0:
+                    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+
+                # 先粘贴阴影（阴影已经包含了偏移）
+                final_output.paste(shadow, (0, 0), shadow)
+
+            # 再粘贴圆角图标
             final_output.paste(rounded_output, (rounded_icon_offset, rounded_icon_offset), rounded_output)
             icon = final_output
         else:
@@ -166,6 +210,18 @@ def main():
     parser.add_argument('--no-rounded-corners', action='store_true',
                         help='不添加圆角 (iOS 会自动添加)')
 
+    # 阴影相关参数
+    parser.add_argument('--shadow', action='store_true',
+                        help='添加阴影效果 (macOS 风格)')
+    parser.add_argument('--shadow-offset-x', type=float, default=0.0,
+                        help='阴影水平偏移比例 (默认: 0.0 = 居中)')
+    parser.add_argument('--shadow-offset-y', type=float, default=0.02,
+                        help='阴影垂直偏移比例 (默认: 0.02 = 向下2%%)')
+    parser.add_argument('--shadow-blur', type=float, default=0.05,
+                        help='阴影模糊半径比例 (默认: 0.05 = 5%%)')
+    parser.add_argument('--shadow-opacity', type=float, default=0.3,
+                        help='阴影透明度 (默认: 0.3 = 30%%)')
+
     args = parser.parse_args()
 
     # 检查 SVG 文件
@@ -190,6 +246,12 @@ def main():
     print(f"🔲 圆角: {'否' if args.no_rounded_corners else '是'}")
     if not args.no_rounded_corners and args.corner_padding > 0:
         print(f"📦 圆角外边距: {args.corner_padding * 100}%")
+    if args.shadow:
+        print(f"🌑 阴影: 是")
+        print(f"   ↔️  水平偏移: {args.shadow_offset_x * 100}%")
+        print(f"   ↕️  垂直偏移: {args.shadow_offset_y * 100}%")
+        print(f"   🌫️  模糊半径: {args.shadow_blur * 100}%")
+        print(f"   💧 透明度: {args.shadow_opacity * 100}%")
     print()
 
     # 生成所有尺寸
@@ -206,7 +268,12 @@ def main():
             args.padding,
             args.scale,
             not args.no_rounded_corners,
-            args.corner_padding
+            args.corner_padding,
+            args.shadow,
+            args.shadow_offset_x,
+            args.shadow_offset_y,
+            args.shadow_blur,
+            args.shadow_opacity
         ):
             print("✅")
             success_count += 1
