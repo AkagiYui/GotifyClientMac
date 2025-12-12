@@ -30,8 +30,6 @@ struct SettingsView: View {
 
             appearanceSettingsSection
 
-            languageSettingsSection
-
             aboutSection
 
             #if DEBUG
@@ -114,11 +112,7 @@ struct SettingsView: View {
                         .tag(appearance)
                 }
             }
-        }
-    }
 
-    private var languageSettingsSection: some View {
-        Section(L("settings.language")) {
             Picker(L("settings.selectLanguage"), selection: Binding(
                 get: { settings.language },
                 set: { newValue in
