@@ -152,7 +152,6 @@ struct MessageRowView: View {
                 Text(message.message)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                    .lineLimit(2)
 
                 HStack {
                     if let serverName = message.server?.name {
